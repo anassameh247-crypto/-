@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>مذاكرتي</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><meta name="apple-mobile-web-app-title" content="مذاكرتي"><meta name="application-name" content="مذاكرتي">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#eef2f6;--card:#fff;--ink:#16233a;--mut:#5d6b82;--line:#d9e0ea;--acc:#0f766e;--accbg:#d7f0ec;--pr:#1d4f91;--prbg:#dce8f8;--ev:#9a5b00;--evbg:#fbeccd;--bad:#b42318}
@@ -49,7 +50,7 @@ button{font:inherit;cursor:pointer}
 .it.now{background:var(--accbg)}
 .it.done b{text-decoration:line-through;opacity:.6}
 .nav{position:fixed;inset:auto 0 0 0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0))}
-.nav button{flex:1;background:none;border:0;color:var(--mut);padding:8px 2px;font-weight:700;font-size:14px;border-radius:10px}
+.nav button{flex:1;background:none;border:0;color:var(--mut);padding:8px 1px;font-weight:700;font-size:12.5px;border-radius:10px}
 .nav button.on{color:var(--acc);background:var(--accbg)}
 .days{display:flex;flex-wrap:wrap;gap:6px}
 .days label{display:flex;align-items:center;gap:4px;margin:0;font-weight:500;border:1px solid var(--line);border-radius:8px;padding:4px 8px}
@@ -59,6 +60,13 @@ button{font:inherit;cursor:pointer}
 .x{background:none;border:0;color:var(--bad);font-weight:700}
 .toast{position:fixed;top:calc(10px + env(safe-area-inset-top,0));inset-inline:12px;max-width:520px;margin:auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-weight:700;z-index:9}
 .msg{border-inline-start:4px solid var(--acc)}
+.pwr{position:relative}.pwr input{padding-inline-end:72px}.eye{position:absolute;inset-inline-end:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--acc);font-weight:700;padding:8px}
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;width:0;transition:width .2s}
+.big{font-size:56px;font-weight:800;text-align:center;margin:10px 0;font-variant-numeric:tabular-nums}
+.lk{background:none;border:0;color:var(--acc);font-weight:700;padding:8px 0;text-decoration:underline}
+:root:root .btn.alt{color:var(--ink)}
+:root[data-theme=dark]{--bg:#0f1724;--card:#182235;--ink:#e8edf5;--mut:#9aa8bf;--line:#2a3750;--acc:#4fd1c1;--accbg:#12403c;--pr:#8db8ff;--prbg:#1a2f52;--ev:#f2b866;--evbg:#4a3412;--bad:#ff8a80}
+:root[data-theme=dark] .btn:not(.alt),:root[data-theme=dark] .chip.on{color:#06201d}
 </style>
 </head>
 <body>
@@ -85,9 +93,9 @@ const me=()=>DB.users[DB.session];
 let S={tab:'today',date:new Date(),mode:'login',tmp:{},err:''};
 
 /* ---------- مواعيد الصلاة (طريقة الهيئة المصرية العامة للمساحة: فجر 19.5 / عشاء 17.5) ---------- */
-function prayerTimes(d,lat,lng){
+function prayerTimes(d,lat,lng,mt,zone){const MT=METH[mt]||METH.egypt;
  const R=Math.PI/180,Y=d.getFullYear(),M=d.getMonth(),D0=d.getDate();
- const tz=-new Date(Y,M,D0,12).getTimezoneOffset()/60;
+ const tz=tzOff(d,zone);
  const jd=Date.UTC(Y,M,D0)/864e5+2440587.5+.5-lng/360,D=jd-2451545;
  const g=((357.529+.98560028*D)%360)*R,q=(280.459+.98564736*D)%360;
  const L=((q+1.915*Math.sin(g)+.02*Math.sin(2*g))%360)*R,e=(23.439-3.6e-7*D)*R;
@@ -95,9 +103,9 @@ function prayerTimes(d,lat,lng){
  const dec=Math.asin(Math.sin(e)*Math.sin(L));
  let eq=q/15-RA;eq=(((eq+12)%24)+24)%24-12;
  const noon=12-eq+tz-lng/15,la=lat*R;
- const ha=el=>Math.acos((Math.sin(el*R)-Math.sin(la)*Math.sin(dec))/(Math.cos(la)*Math.cos(dec)))/R/15;
+ const ha=el=>Math.acos(Math.max(-1,Math.min(1,(Math.sin(el*R)-Math.sin(la)*Math.sin(dec))/(Math.cos(la)*Math.cos(dec)))))/R/15;
  const asrEl=Math.atan(1/(1+Math.tan(Math.abs(la-dec))))/R,m=h=>Math.round(h*60);
- return{fajr:m(noon-ha(-19.5)),sunrise:m(noon-ha(-.833)),dhuhr:m(noon)+1,asr:m(noon+ha(asrEl)),maghrib:m(noon+ha(-.833)),isha:m(noon+ha(-17.5))};
+ return{fajr:m(noon-ha(-MT[1])),sunrise:m(noon-ha(-.833)),dhuhr:m(noon)+1,asr:m(noon+ha(asrEl)),maghrib:m(noon+ha(-.833)),isha:m(MT[2]?noon+ha(-MT[2]):noon+ha(-.833)+1.5)};
 }
 /* ---------- التقويم القبطي والأصوام ---------- */
 function coptic(d){
@@ -107,10 +115,13 @@ function coptic(d){
  const Y=Math.floor(((jd-ep)*4+1463)/1461),M=Math.floor((jd-c2j(Y,1,1))/30)+1;
  return(jd-c2j(Y,M,1)+1)+' '+CM[M-1]+' '+Y;
 }
-function easter(y){const a=y%4,b=y%7,c=y%19,d=(19*c+15)%30,e=(2*a+4*b-d+34)%7,s=d+e+114;return new Date(y,Math.floor(s/31)-1,s%31+1+13)}
-function chInfo(d,sect){
- const y=d.getFullYear(),n=dnum(d),o=n-dnum(easter(y)),mo=d.getMonth()+1,dd=d.getDate(),dw=d.getDay(),f=[],x=[];
- const F={0:'عيد القيامة المجيد','-7':'أحد الشعانين','-2':'الجمعة العظيمة',39:'عيد الصعود',49:'عيد العنصرة'}[o];if(F)f.push(F);
+function easter(y,w){
+ if(w){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),t=h+l-7*m+114;return new Date(y,Math.floor(t/31)-1,t%31+1)}
+ const a=y%4,b=y%7,c=y%19,d=(19*c+15)%30,e=(2*a+4*b-d+34)%7,t=d+e+114;return new Date(y,Math.floor(t/31)-1,t%31+1+13);
+}
+function chInfo(d,sect,w){
+ const y=d.getFullYear(),n=dnum(d),o=n-dnum(easter(y,w)),mo=d.getMonth()+1,dd=d.getDate(),dw=d.getDay(),f=[],x=[];
+ const F={0:'عيد القيامة المجيد','-7':'أحد الشعانين','-2':'الجمعة العظيمة',39:'عيد الصعود',49:'عيد العنصرة'}[o];if(F)f.push(F);if(w&&o===-46)f.push('أربعاء الرماد');
  if(mo==1&&dd==7)f.push('عيد الميلاد المجيد');if(mo==1&&dd==19)f.push('عيد الغطاس');if(mo==8&&dd==22)f.push('عيد صعود السيدة العذراء');
  if(sect==='أرثوذكسي'){
   if(o>=-55&&o<=-1)x.push('الصوم الكبير');
@@ -126,7 +137,7 @@ function hijri(d,latin){try{return new Intl.DateTimeFormat((latin?'en':'ar-EG')+
 /* ---------- بناء اليوم ---------- */
 const agList=(u,pt)=>u.sect==='أرثوذكسي'?[['باكر',360],['الثالثة',540],['السادسة',720],['التاسعة',900],['الغروب',pt.maghrib,1],['النوم',1260],['نصف الليل',1410]]:[['الصباح',360],['الظهر',720],['المساء',pt.maghrib,1],['النوم',1260]];
 function dayItems(u,d){
- const it=[],dow=d.getDay(),ds=iso(d),pt=prayerTimes(d,u.lat,u.lng);
+ const it=[],dow=d.getDay(),ds=iso(d),pt=prayerTimes(d,u.lat,u.lng,u.method,u.tz);
  (u.events||[]).forEach(e=>{if((e.days&&e.days.includes(dow))||e.date===ds)it.push({s:e.s,e:e.e,t:e.title,k:'ev',sub:e.kind})});
  if(u.religion==='m'){
   [['الفجر',pt.fajr],['الظهر',pt.dhuhr],['العصر',pt.asr],['المغرب',pt.maghrib],['العشاء',pt.isha]].forEach(([n,t])=>it.push({s:t,e:t+20,t:'صلاة '+n,k:'pr'}));
@@ -147,71 +158,95 @@ function render(){
  $('#app').innerHTML=h;
 }
 function authView(){
- const reg=S.mode==='reg';
- return `<div class="wrap"><h1>مذاكرتي</h1><p class="mut">جدول مذاكرة يتظبط على مواعيد دروسك وصلواتك.</p>
- <div class="card"><div class="chips"><button class="chip ${reg?'':'on'}" onclick="S.mode='login';S.err='';render()">دخول</button><button class="chip ${reg?'on':''}" onclick="S.mode='reg';S.err='';render()">حساب جديد</button></div>
+ const m=S.mode,reg=m==='reg',rs=m==='reset',nw=reg||rs;
+ return `<div class="wrap"><h1>مذاكرتي</h1><p class="mut">جدول مذاكرة بيتظبط على مواعيد دروسك وصلواتك، من أي مكان في العالم.</p>
+ <div class="card">${rs?'<h3>استرجاع كلمة السر</h3>':`<div class="chips"><button class="chip ${reg?'':'on'}" onclick="S.mode='login';S.err='';render()">دخول</button><button class="chip ${reg?'on':''}" onclick="S.mode='reg';S.err='';render()">حساب جديد</button></div>`}
  ${reg?'<label for="nm">الاسم</label><input id="nm" autocomplete="name">':''}
- <label for="ph">رقم التليفون</label><input id="ph" type="tel" inputmode="numeric" autocomplete="tel">
- <label for="pw">كلمة السر</label><input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}">
+ <label for="ph">رقم التليفون (مع كود الدولة لو من برا مصر)</label><input id="ph" type="tel" inputmode="numeric" autocomplete="tel">
+ ${nw?`<label for="rq">سؤال الأمان</label><select id="rq">${RQ.map((q,i)=>`<option value="${i}">${q}</option>`).join('')}</select><label for="ra">الإجابة</label><input id="ra" autocomplete="off">`:''}
+ ${pwf('pw',rs?'كلمة السر الجديدة':'كلمة السر',nw?'new-password':'current-password',nw?'meter()':'')}
+ ${nw?'<div class="meter"><i id="pm"></i></div><div class="mut" id="ml"></div>':''}
+ ${reg?pwf('pw2','تأكيد كلمة السر','new-password'):''}
  <div class="err" id="er">${esc(S.err)}</div>
- <button class="btn" onclick="doAuth()">${reg?'إنشاء الحساب':'تسجيل الدخول'}</button></div></div>`;
+ <button class="btn" onclick="doAuth()">${reg?'إنشاء الحساب':rs?'تغيير كلمة السر':'تسجيل الدخول'}</button>
+ ${m==='login'?`<button class="lk" onclick="S.mode='reset';S.err='';render()">نسيت كلمة السر؟</button>`:rs?`<button class="lk" onclick="S.mode='login';S.err='';render()">رجوع للدخول</button>`:''}</div></div>`;
 }
+const RQ=['اسم أول مدرسة ليك','اسم أقرب صديق في الطفولة','اسم مدينة اتولدت فيها','اسم أول مدرس حبيته'];
+const pwf=(id,lab,ac,inp)=>`<label for="${id}">${lab}</label><div class="pwr"><input id="${id}" type="password" autocomplete="${ac}" ${inp?`oninput="${inp}"`:''}><button type="button" class="eye" onclick="eye('${id}',this)">إظهار</button></div>`;
+function eye(id,b){const i=$('#'+id),h=i.type==='password';i.type=h?'text':'password';b.textContent=h?'إخفاء':'إظهار'}
+function meter(){const p=$('#pw').value;let c=0;if(p.length>=8)c++;if(p.length>=12)c++;if(/[a-z]/i.test(p)&&/\d/.test(p))c++;if(/[^a-z0-9]/i.test(p))c++;const b=$('#pm');b.style.width=(p?Math.max(c,1)*25:0)+'%';b.style.background=c<2?'var(--bad)':c<3?'var(--ev)':'var(--acc)';$('#ml').textContent=p?['ضعيفة','ضعيفة','متوسطة','قوية','قوية جداً'][c]:''}
 const normPh=s=>String(s).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/\D/g,'');
 async function hash(p,ph){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ph+':'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent(ph+'|'+p)))}}
+let FAILS={};
 async function doAuth(){
- const ph=normPh($('#ph').value),pw=$('#pw').value,reg=S.mode==='reg',nm=reg?$('#nm').value.trim():'';
- const bad=m=>{S.err=m;$('#er').textContent=m};
- if(ph.length<10||ph.length>15)return bad('اكتب رقم تليفون صحيح.');
+ const m=S.mode,ph=normPh($('#ph').value),pw=$('#pw').value,bad=t=>{S.err=t;$('#er').textContent=t};
+ if(ph.length<8||ph.length>15)return bad('اكتب رقم تليفون صحيح.');
  if(pw.length<6)return bad('كلمة السر لازم تكون 6 حروف أو أرقام على الأقل.');
- const hs=await hash(pw,ph);
- if(reg){
+ const ra=m==='login'?'':$('#ra').value.trim().toLowerCase(),rq=m==='login'?'':$('#rq').value,hs=await hash(pw,ph);
+ if(m==='reg'){
+  const nm=$('#nm').value.trim();
   if(nm.length<2)return bad('اكتب اسمك.');
+  if(pw!==$('#pw2').value)return bad('كلمتين السر مش زي بعض.');
+  if(ra.length<2)return bad('اكتب إجابة سؤال الأمان.');
   if(DB.users[ph])return bad('الرقم ده عنده حساب بالفعل. سجّل دخول.');
-  DB.users[ph]={name:nm,phone:ph,hash:hs,ss:900,se:1320,events:[],subjects:[],done:{}};
+  DB.users[ph]={name:nm,phone:ph,hash:hs,rq,rh:await hash(ra,ph+'rq'),ss:900,se:1320,events:[],subjects:[],exams:[],tasks:[],done:{},focus:{}};
+ }else if(m==='reset'){
+  const u=DB.users[ph];if(!u||!u.rh||u.rq!==rq||u.rh!==await hash(ra,ph+'rq'))return bad('البيانات مش مظبوطة، أو الحساب ده معندوش سؤال أمان.');
+  u.hash=hs;
  }else{
-  const u=DB.users[ph];if(!u||u.hash!==hs)return bad('الرقم أو كلمة السر غلط.');
+  const u=DB.users[ph];if((FAILS[ph]||0)>=5)return bad('محاولات غلط كتير. استنى دقيقة وجرب تاني.');
+  if(!u||u.hash!==hs){FAILS[ph]=(FAILS[ph]||0)+1;if(FAILS[ph]>=5)setTimeout(()=>FAILS[ph]=0,60000);return bad('الرقم أو كلمة السر غلط.')}
+  FAILS[ph]=0;
  }
- DB.session=ph;save();S.err='';S.tab='today';S.tmp={};render();
+ DB.session=ph;save();S.err='';S.mode='login';S.tab='today';S.tmp={};render();
 }
 function logout(){DB.session=null;save();S.mode='login';render()}
 function onboard(){
- const t=S.tmp,u=me(),ch=(on,fn,txt)=>`<button class="chip ${on?'on':''}" onclick="${fn}">${txt}</button>`;
+ const t=S.tmp,u=me(),ch=(on,fn,x)=>`<button class="chip ${on?'on':''}" onclick="${fn}">${x}</button>`;
  return `<div class="wrap"><h1>أهلاً ${esc(u.name)}</h1><p class="mut">كام سؤال بسيط عشان نظبط مواعيدك.</p>
- <div class="card"><h3>انت مسلم ولا مسيحي؟</h3><div class="chips">${ch(t.r==='m',"S.tmp.r='m';render()",'مسلم')}${ch(t.r==='c',"S.tmp.r='c';render()",'مسيحي')}</div>
- ${t.r==='c'?`<label>الطائفة</label><div class="chips">${['أرثوذكسي','كاثوليكي','إنجيلي'].map(s=>ch(t.sect===s,`S.tmp.sect='${s}';render()`,s)).join('')}</div>`:''}</div>
- <div class="card"><h3>مكانك</h3><p class="mut">بنحسب مواعيد الصلاة والغروب من إحداثياتك.</p>
+ <div class="card"><h3>الديانة</h3><div class="chips">${ch(t.r==='m',"S.tmp.r='m';render()",'مسلم')}${ch(t.r==='c',"S.tmp.r='c';render()",'مسيحي')}</div>
+ ${t.r==='c'?`<label>الطائفة</label><div class="chips">${['أرثوذكسي','كاثوليكي','إنجيلي'].map(x=>ch(t.sect===x,`S.tmp.sect='${x}';render()`,x)).join('')}</div>`:''}</div>
+ <div class="card"><h3>مكانك (أي مدينة في العالم)</h3>
  <button class="btn alt" onclick="locate()">حدد موقعي بالتليفون</button>
- <label for="gv">أو اختار محافظتك</label><select id="gv" onchange="pickGov(this.value)"><option value="">اختار...</option>${Object.keys(GOV).map(g=>`<option ${t.place===g?'selected':''}>${g}</option>`).join('')}</select>
- ${t.lat!=null?`<p class="badge">تم تحديد: ${esc(t.place)}</p>`:''}<div class="err">${esc(S.err)}</div></div>
+ <label for="cq">أو ابحث عن مدينتك</label><div class="row"><input id="cq" placeholder="مثلاً: Dubai أو طنطا" onkeydown="if(event.key==='Enter')citySearch()"><button class="btn sm" style="flex:0 0 auto" onclick="citySearch()">بحث</button></div>
+ ${(S.res||[]).length?`<div class="chips" style="margin-top:8px">${S.res.map((c,i)=>`<button class="chip" onclick="pickCity(${i})">${esc(c.name)}${c.admin1?'، '+esc(c.admin1):''}${c.country?'، '+esc(c.country):''}</button>`).join('')}</div>`:''}
+ <label for="gv">أو محافظة مصرية</label><select id="gv" onchange="pickGov(this.value)"><option value="">اختار...</option>${Object.keys(GOV).map(g=>`<option ${t.place===g?'selected':''}>${g}</option>`).join('')}</select>
+ ${t.lat!=null?`<p class="badge">تم تحديد: ${esc(t.place)}</p>`:''}
+ ${t.r==='m'?`<label for="mt0">طريقة حساب الصلاة</label><select id="mt0" onchange="S.tmp.method=this.value">${Object.entries(METH).map(([k,v])=>`<option value="${k}" ${(t.method||guessMt())===k?'selected':''}>${v[0]}</option>`).join('')}</select>`:''}
+ <div class="err">${esc(S.err)}</div></div>
  <button class="btn" onclick="finishOnb()">ابدأ</button></div>`;
 }
+const guessMt=()=>/Cairo/.test(Intl.DateTimeFormat().resolvedOptions().timeZone)?'egypt':'mwl';
+async function citySearch(){const q=$('#cq').value.trim();if(q.length<2)return;S.err='';try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&language=ar&name='+encodeURIComponent(q));S.res=(await r.json()).results||[];if(!S.res.length)S.err='مفيش نتايج. جرب اسم تاني أو بالإنجليزي.'}catch(e){S.err='محتاج اتصال بالنت للبحث. جرب تاني.'}render()}
+function pickCity(i){const c=S.res[i];Object.assign(S.tmp,{lat:c.latitude,lng:c.longitude,place:c.name+(c.country?'، '+c.country:''),tz:c.timezone,cc:c.country_code,method:{EG:'egypt',US:'isna',CA:'isna',PK:'karachi',IN:'karachi',BD:'karachi',SA:'umm'}[c.country_code]||'mwl'});S.res=[];S.err='';render()}
 function locate(){
  if(!navigator.geolocation){S.err='المتصفح مش بيدعم تحديد الموقع. اختار محافظتك.';return render()}
- navigator.geolocation.getCurrentPosition(p=>{S.tmp.lat=p.coords.latitude;S.tmp.lng=p.coords.longitude;S.tmp.place='موقعك الحالي';S.err='';render()},()=>{S.err='مقدرناش نحدد موقعك. اسمح بالإذن أو اختار محافظتك.';render()},{timeout:12000});
+ navigator.geolocation.getCurrentPosition(p=>{S.tmp.lat=p.coords.latitude;S.tmp.lng=p.coords.longitude;S.tmp.place='موقعك الحالي';S.tmp.tz=null;S.tmp.cc=null;S.err='';render()},()=>{S.err='مقدرناش نحدد موقعك. اسمح بالإذن أو اختار محافظتك.';render()},{timeout:12000});
 }
-function pickGov(v){if(!v)return;S.tmp.lat=GOV[v][0];S.tmp.lng=GOV[v][1];S.tmp.place=v;S.err='';render()}
+function pickGov(v){if(!v)return;Object.assign(S.tmp,{lat:GOV[v][0],lng:GOV[v][1],place:v,tz:null,cc:'EG',method:'egypt'});S.err='';render()}
 function finishOnb(){
  const t=S.tmp,u=me();
  if(!t.r)return S.err='اختار الديانة الأول.',render();
  if(t.r==='c'&&!t.sect)return S.err='اختار الطائفة.',render();
  if(t.lat==null)return S.err='حدد مكانك الأول.',render();
- Object.assign(u,{religion:t.r,sect:t.r==='c'?t.sect:'',lat:t.lat,lng:t.lng,place:t.place});save();S.tmp={};render();
+ const mt=t.method||guessMt();
+ Object.assign(u,{religion:t.r,sect:t.r==='c'?t.sect:'',lat:t.lat,lng:t.lng,place:t.place,tz:t.tz||null,method:mt,eas:(t.sect==='أرثوذكسي'||mt==='egypt')?'o':'w'});save();S.tmp={};render();
 }
 function appView(u){
- const tabs=[['today','اليوم'],['ev','المواعيد'],['st','المذاكرة'],['msg','رسائل'],['me','حسابي']];
- const body={today:todayV,ev:evV,st:stV,msg:msgV,me:meV}[S.tab](u);
+ const tabs=[['today','اليوم'],['ev','المواعيد'],['st','المذاكرة'],['fx','تركيز'],['msg','رسائل'],['me','حسابي']];
+ const body={today:todayV,ev:evV,st:stV,fx:fxV,msg:msgV,me:meV}[S.tab](u);
  return `<div class="wrap">${body}</div><nav class="nav">${tabs.map(([k,n])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';render()">${n}</button>`).join('')}</nav>`;
 }
 function todayV(u){
  const d=S.date,it=dayItems(u,d),now=new Date(),isT=iso(d)===iso(now),nm=now.getHours()*60+now.getMinutes();
  let info='';
  if(u.religion==='m'){const hm=hijri(d);info=`<span class="badge">${hm}</span>`;if(hijri(d,1)==9)info+='<span class="badge f">رمضان</span>';if(d.getDay()===5)info+='<span class="badge">يوم الجمعة</span>'}
- else{const c=chInfo(d,u.sect);info=`<span class="badge">${coptic(d)}</span>`+c.f.map(x=>`<span class="badge">${x}</span>`).join('')+c.x.map(x=>`<span class="badge f">${x}</span>`).join('')}
+ else{const c=chInfo(d,u.sect,u.eas==='w');info=`<span class="badge">${coptic(d)}</span>`+c.f.map(x=>`<span class="badge">${x}</span>`).join('')+c.x.map(x=>`<span class="badge f">${x}</span>`).join('')}
  const rows=it.map(x=>{const dn=u.done&&u.done[x.key],cur=isT&&x.s<=nm&&nm<x.e;
   return `<li class="it ${x.k} ${cur?'now':''} ${dn?'done':''}" ${x.k==='st'?`onclick="toggleDone('${x.key}')"`:''}><span class="tm">${x.k==='info'?fm(x.s):fm(x.s)+'<br>'+fm(x.e)}</span><span><b>${esc(x.t)}</b><span class="mut">${x.k==='st'?(dn?'خلصت ✓':'دوس لما تخلص'):esc(x.sub||'')}</span></span></li>`}).join('');
  return `<div class="top"><div><h2>${DN[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}</h2><div>${info}</div></div><div class="dnav"><button aria-label="اليوم التالي" onclick="shift(1)">›</button><button aria-label="اليوم السابق" onclick="shift(-1)">‹</button></div></div>
  ${isT?'':'<button class="btn alt sm" style="margin-bottom:10px" onclick="S.date=new Date();render()">ارجع لليوم</button>'}
- <ul class="tl">${rows||'<li class="card mut">مفيش حاجة في اليوم ده.</li>'}</ul>
+ ${extra(u,d,it)}<ul class="tl">${rows||'<li class="card mut">مفيش حاجة في اليوم ده.</li>'}</ul>
  ${(u.subjects||[]).length?'':'<p class="mut">ضيف موادك من تبويب «المذاكرة» عشان الجدول يتوزع عليها.</p>'}`;
 }
 const shift=n=>{S.date=new Date(S.date.getFullYear(),S.date.getMonth(),S.date.getDate()+n);render()};
@@ -235,12 +270,15 @@ function addEv(){
 }
 function delEv(i){me().events.splice(i,1);save();render()}
 function stV(u){
- const list=(u.subjects||[]).map((s,i)=>`<div class="li"><span><b>${esc(s.name)}</b> <span class="mut">${['','عادية','مهمة','أولوية عالية'][s.w]}</span></span><button class="x" onclick="delSub(${i})">حذف</button></div>`).join('');
+ const td=iso(new Date()),R=(a,f)=>(a||[]).map(f).join('');
+ const sb=R(u.subjects,(x,i)=>`<div class="li"><span><b>${esc(x.name)}</b> <span class="mut">${['','عادية','مهمة','أولوية عالية'][x.w]}</span></span><button class="x" onclick="delSub(${i})">حذف</button></div>`);
+ const ex=R(u.exams,(e,i)=>`<div class="li"><span><b>${esc(e.name)}</b> <span class="mut">${e.date}</span></span><button class="x" onclick="delEx(${i})">حذف</button></div>`);
+ const tk=R(u.tasks,(k,i)=>`<div class="li"><span style="${k.d?'text-decoration:line-through;opacity:.6':''}"><b>${esc(k.t)}</b> <span class="mut">${k.due||''}</span>${!k.d&&k.due&&k.due<td?' <span class="badge f">متأخر</span>':''}</span><span><button class="x" style="color:var(--acc)" onclick="togTk(${i})">${k.d?'رجوع':'تم'}</button> <button class="x" onclick="delTk(${i})">حذف</button></span></div>`);
  return `<h2>المذاكرة</h2>
- <div class="card"><h3>وقت المذاكرة في اليوم</h3><div class="row"><div><label for="ss">من</label><input id="ss" type="time" value="${mv(u.ss)}" onchange="setWin()"></div><div><label for="se">إلى</label><input id="se" type="time" value="${mv(u.se)}" onchange="setWin()"></div></div>
- <p class="mut">الجدول بيقسم الوقت الفاضي لفترات 45 دقيقة واستراحة 10 دقايق.</p></div>
- <div class="card"><h3>المواد</h3><div class="row"><div style="flex:2"><input id="sn" placeholder="اسم المادة" aria-label="اسم المادة"></div><div><select id="sw" aria-label="الأولوية"><option value="1">عادية</option><option value="2">مهمة</option><option value="3">أولوية عالية</option></select></div></div>
- <div class="err" id="er"></div><button class="btn" onclick="addSub()">إضافة مادة</button>${list?'<div style="margin-top:10px">'+list+'</div>':''}</div>`;
+ <div class="card"><h3>وقت المذاكرة في اليوم</h3><div class="row"><div><label for="ss">من</label><input id="ss" type="time" value="${mv(u.ss)}" onchange="setWin()"></div><div><label for="se">إلى</label><input id="se" type="time" value="${mv(u.se)}" onchange="setWin()"></div></div><p class="mut">الوقت الفاضي بيتقسم لفترات 45 دقيقة واستراحة 10 دقايق.</p></div>
+ <div class="card"><h3>المواد</h3><div class="row"><div style="flex:2"><input id="sn" placeholder="اسم المادة" aria-label="اسم المادة"></div><div><select id="sw" aria-label="الأولوية"><option value="1">عادية</option><option value="2">مهمة</option><option value="3">أولوية عالية</option></select></div></div><div class="err" id="er"></div><button class="btn" onclick="addSub()">إضافة مادة</button>${sb?'<div style="margin-top:10px">'+sb+'</div>':''}</div>
+ <div class="card"><h3>الامتحانات</h3><div class="row"><div style="flex:2"><input id="xn" placeholder="المادة" aria-label="المادة"></div><div><input id="xd" type="date" aria-label="تاريخ الامتحان"></div></div><button class="btn" onclick="addEx()">إضافة امتحان</button>${ex?'<div style="margin-top:10px">'+ex+'</div>':''}</div>
+ <div class="card"><h3>الواجبات</h3><div class="row"><div style="flex:2"><input id="tn" placeholder="الواجب" aria-label="الواجب"></div><div><input id="td" type="date" aria-label="موعد التسليم"></div></div><button class="btn" onclick="addTk()">إضافة واجب</button>${tk?'<div style="margin-top:10px">'+tk+'</div>':''}</div>`;
 }
 function setWin(){const u=me(),a=tm($('#ss').value),b=tm($('#se').value);if(b>a+30){u.ss=a;u.se=b;save()}else{$('#ss').value=mv(u.ss);$('#se').value=mv(u.se)}}
 function addSub(){const n=$('#sn').value.trim();if(!n)return $('#er').textContent='اكتب اسم المادة.';me().subjects.push({name:n,w:+$('#sw').value});save();render()}
@@ -252,16 +290,80 @@ function msgV(u){
  L.map((m,i)=>`<div class="card msg"><div class="mut">${i===0?'النهارده':DN[m.d.getUTCDay()]}</div>${m.t}</div>`).join('');
 }
 function meV(u){
- const fixed=u.religion==='c'?agList(u,{maghrib:0}).filter(x=>!x[2]):[];
- return `<h2>حسابي</h2><div class="card"><b>${esc(u.name)}</b><div class="mut">${esc(u.phone)}</div><div class="mut">${u.religion==='m'?'مسلم':'مسيحي · '+esc(u.sect)} · ${esc(u.place)}</div>
- <button class="btn alt" onclick="me().lat=null;S.tmp={r:me().religion,sect:me().sect};render()">تغيير الديانة أو المكان</button></div>
- <div class="card"><h3>التذكيرات</h3><p class="mut">بنبعت تنبيه قبل كل صلاة ومذاكرة بـ 10 دقايق طول ما الموقع مفتوح.</p><div id="nst" class="mut">${'Notification' in window?(Notification.permission==='granted'?'التنبيهات شغالة.':'التنبيهات مقفولة.'):'المتصفح مش بيدعم التنبيهات، هتظهر لك جوه الموقع.'}</div>
- ${'Notification' in window&&Notification.permission!=='granted'?'<button class="btn" onclick="askN()">شغّل التنبيهات</button>':''}</div>
+ const fixed=u.religion==='c'?agList(u,{maghrib:0}).filter(x=>!x[2]):[],o=(v,t,c)=>`<option value="${v}" ${v===c?'selected':''}>${t}</option>`,ng='Notification' in window;
+ return `<h2>حسابي</h2>
+ <div class="card"><label for="pn">الاسم</label><input id="pn" value="${esc(u.name)}"><div class="mut" style="margin-top:6px">${esc(u.phone)} · ${u.religion==='m'?'مسلم':'مسيحي · '+esc(u.sect)} · ${esc(u.place)}</div>
+ <div class="row"><button class="btn alt" onclick="saveName()">حفظ الاسم</button><button class="btn alt" onclick="me().lat=null;S.tmp={r:me().religion,sect:me().sect};render()">تغيير المكان</button></div></div>
+ <div class="card"><h3>الإعدادات</h3>
+ ${u.religion==='m'?`<label for="mt">طريقة حساب الصلاة</label><select id="mt" onchange="setU('method',this.value)">${Object.entries(METH).map(([k,v])=>o(k,v[0],u.method||'egypt')).join('')}</select>`:`<label for="ea">تقويم الأعياد والفصح</label><select id="ea" onchange="setU('eas',this.value)">${o('o','شرقي (أرثوذكسي / قبطي)',u.eas||'o')}${o('w','غربي (كاثوليكي / بروتستانتي)',u.eas)}</select>`}
+ <label for="th">المظهر</label><select id="th" onchange="setTheme(this.value)">${o('auto','حسب التليفون',DB.theme||'auto')}${o('light','فاتح',DB.theme)}${o('dark','داكن',DB.theme)}</select></div>
  ${fixed.length?`<div class="card"><h3>مواعيد الصلوات (تقدر تعدلها)</h3>${fixed.map(([n,t])=>`<div class="li"><span>${n}</span><input type="time" style="width:130px" value="${mv((u.agt||{})[n]??t)}" onchange="setAg('${n}',this.value)" aria-label="${n}"></div>`).join('')}<p class="mut">الغروب بيتحسب تلقائي حسب مكانك.</p></div>`:''}
- <button class="btn alt" onclick="logout()">تسجيل الخروج</button>`;
+ <div class="card"><h3>التطبيق والتنبيهات</h3>
+ ${deferredInstall?'<button class="btn" onclick="installApp()">ثبّت مذاكرتي كتطبيق</button>':'<p class="mut">أندرويد: ⋮ ← تثبيت التطبيق. آيفون (Safari): مشاركة ← إضافة إلى الشاشة الرئيسية.</p>'}
+ <p class="mut">${ng?(Notification.permission==='granted'?'التنبيهات شغالة (قبل كل صلاة ومذاكرة بـ 10 دقايق طول ما الموقع مفتوح).':'التنبيهات مقفولة.'):'المتصفح مش بيدعم التنبيهات، هتظهر جوه الموقع.'}</p>${ng&&Notification.permission!=='granted'?'<button class="btn alt" onclick="askN()">شغّل التنبيهات</button>':''}</div>
+ <div class="card"><h3>تغيير كلمة السر</h3>${pwf('op','الحالية','current-password')}${pwf('np','الجديدة','new-password')}<button class="btn alt" onclick="changePw()">تغيير</button></div>
+ <div class="card"><h3>نسخة احتياطية</h3><p class="mut">بياناتك محفوظة على الجهاز ده. خد نسخة عشان ترجّعها لو غيرت التليفون.</p><div class="row"><button class="btn alt" onclick="exportData()">تحميل نسخة</button><label class="btn alt" style="text-align:center;margin:12px 0 0;cursor:pointer">استرجاع<input type="file" accept="application/json" hidden onchange="importData(this)"></label></div></div>
+ <button class="btn alt" onclick="logout()">تسجيل الخروج</button><button class="lk" style="color:var(--bad)" onclick="delAcc()">حذف الحساب نهائياً</button>`;
 }
 function setAg(n,v){const u=me();u.agt=u.agt||{};u.agt[n]=tm(v);save()}
 function askN(){Notification.requestPermission().then(()=>render())}
+
+/* ---------- ميزات إضافية ---------- */
+const METH={egypt:['الهيئة المصرية العامة للمساحة',19.5,17.5],mwl:['رابطة العالم الإسلامي',18,17],isna:['أمريكا الشمالية (ISNA)',15,15],karachi:['جامعة العلوم الإسلامية - كراتشي',18,18],umm:['أم القرى (مكة)',18.5,0]};
+function tzOff(d,z){
+ const loc=-new Date(d.getFullYear(),d.getMonth(),d.getDate(),12).getTimezoneOffset()/60;if(!z)return loc;
+ try{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),12)),p={};new Intl.DateTimeFormat('en-US',{timeZone:z,hourCycle:'h23',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'}).formatToParts(t).forEach(x=>p[x.type]=+x.value);return(Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute)-t.getTime())/36e5}catch(e){return loc}
+}
+function qibla(lat,lng){const R=Math.PI/180,K=[21.4225,39.8262],dl=(K[1]-lng)*R,y=Math.sin(dl)*Math.cos(K[0]*R),x=Math.cos(lat*R)*Math.sin(K[0]*R)-Math.sin(lat*R)*Math.cos(K[0]*R)*Math.cos(dl);return Math.round((Math.atan2(y,x)/R+360)%360)}
+function extra(u,d,it){
+ const D=u.done||{},st=it.filter(x=>x.k==='st'),dn=st.filter(x=>D[x.key]).length,n=dnum(d);
+ const has=dt=>Object.keys(D).some(k=>D[k]&&k.startsWith(iso(dt)+'-'));let c=new Date(),sk=0;if(!has(c))c.setDate(c.getDate()-1);while(has(c)&&sk<400){sk++;c.setDate(c.getDate()-1)}
+ const ex=(u.exams||[]).map(e=>({...e,left:Math.round(Date.parse(e.date+'T00:00:00Z')/864e5-n)})).filter(e=>e.left>=0).sort((a,b)=>a.left-b.left).slice(0,2);
+ const ot=(u.tasks||[]).filter(k=>!k.d).length;
+ return(deferredInstall?`<div class="card row"><span>ثبّت مذاكرتي كتطبيق على تليفونك</span><button class="btn sm" style="flex:0 0 auto" onclick="installApp()">تثبيت</button></div>`:'')+
+ `<div class="card"><div class="row"><div><b>${dn}/${st.length}</b><div class="mut">فترات خلصتها</div></div><div><b>${sk} يوم</b><div class="mut">سلسلة المذاكرة</div></div><div><b>${ot}</b><div class="mut">واجبات مفتوحة</div></div>${u.religion==='m'?`<div><b>${qibla(u.lat,u.lng)}°</b><div class="mut">القبلة من الشمال</div></div>`:''}</div>`+
+ ex.map(e=>`<div class="li"><span>امتحان <b>${esc(e.name)}</b></span><span class="badge f">${e.left?'باقي '+e.left+' يوم':'النهارده'}</span></div>`).join('')+'</div>';
+}
+const addEx=()=>{const n=$('#xn').value.trim(),d=$('#xd').value;if(!n||!d)return toast('اكتب المادة وحدد التاريخ.');const u=me();(u.exams=u.exams||[]).push({name:n,date:d});save();render()};
+const delEx=i=>{me().exams.splice(i,1);save();render()};
+const addTk=()=>{const t=$('#tn').value.trim();if(!t)return toast('اكتب الواجب.');const u=me();(u.tasks=u.tasks||[]).push({t,due:$('#td').value,d:0});save();render()};
+const togTk=i=>{const k=me().tasks[i];k.d=k.d?0:1;save();render()};
+const delTk=i=>{me().tasks.splice(i,1);save();render()};
+/* تركيز (بومودورو) */
+let FX={len:25,left:1500,run:0};
+const mmss=s=>pad(s/60|0)+':'+pad(s%60);
+function fxV(u){
+ const f=u.focus||{};let wk=0;for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);wk+=f[iso(d)]||0}
+ return `<h2>وضع التركيز</h2><div class="card"><div class="chips" style="justify-content:center">${[25,45,60].map(m=>`<button class="chip ${FX.len===m?'on':''}" onclick="fxLen(${m})">${m} دقيقة</button>`).join('')}</div>
+ <div class="big" id="fxt" role="timer">${mmss(FX.left)}</div><div class="row"><button class="btn" onclick="fxToggle()">${FX.run?'إيقاف مؤقت':'ابدأ'}</button><button class="btn alt" onclick="fxReset()">إعادة</button></div></div>
+ <div class="card"><div class="row"><div><b>${f[iso(new Date())]||0} دقيقة</b><div class="mut">تركيز النهارده</div></div><div><b>${wk} دقيقة</b><div class="mut">آخر 7 أيام</div></div></div></div>`;
+}
+const fxStop=()=>{clearInterval(FX.iv);FX.run=0};
+const fxLen=m=>{fxStop();FX.len=m;FX.left=m*60;render()};
+const fxReset=()=>{fxStop();FX.left=FX.len*60;render()};
+function fxToggle(){
+ if(FX.run){fxStop();return render()}
+ FX.run=1;FX.end=Date.now()+FX.left*1000;
+ FX.iv=setInterval(()=>{FX.left=Math.max(0,Math.round((FX.end-Date.now())/1000));const e=$('#fxt');if(e)e.textContent=mmss(FX.left);
+  if(!FX.left){fxStop();const u=me(),k=iso(new Date());u.focus=u.focus||{};u.focus[k]=(u.focus[k]||0)+FX.len;save();FX.left=FX.len*60;notify('خلصت '+FX.len+' دقيقة تركيز. خد استراحة.');if(S.tab==='fx')render()}},500);
+ render();
+}
+function notify(t){toast(t);try{if('Notification' in window&&Notification.permission==='granted')new Notification('مذاكرتي',{body:t})}catch(e){}}
+/* حساب */
+const setU=(k,v)=>{me()[k]=v;save();toast('تم الحفظ.')};
+const saveName=()=>{const n=$('#pn').value.trim();if(n.length<2)return toast('اكتب اسمك.');me().name=n;save();toast('تم الحفظ.')};
+async function changePw(){const u=me(),o=$('#op').value,n=$('#np').value;if(n.length<6)return toast('كلمة السر الجديدة لازم 6 على الأقل.');if(await hash(o,u.phone)!==u.hash)return toast('كلمة السر الحالية غلط.');u.hash=await hash(n,u.phone);save();toast('تم تغيير كلمة السر.');render()}
+function exportData(){const u=me(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(u)],{type:'application/json'}));a.download='mozakarti-'+u.phone+'.json';a.click()}
+function importData(i){const f=i.files[0];if(!f)return;f.text().then(t=>{try{const o=JSON.parse(t);if(o.phone!==me().phone)return toast('الملف ده بتاع حساب تاني.');DB.users[o.phone]=Object.assign(o,{hash:me().hash});save();toast('تم استرجاع البيانات.');render()}catch(e){toast('الملف مش صالح.')}})}
+function delAcc(){if(confirm('هتتمسح كل بياناتك نهائياً. متأكد؟')){delete DB.users[DB.session];logout()}}
+function setTheme(v){DB.theme=v;save();applyTheme()}
+function applyTheme(){const r=document.documentElement;DB.theme&&DB.theme!=='auto'?r.setAttribute('data-theme',DB.theme):r.removeAttribute('data-theme')}
+/* تثبيت كتطبيق */
+let deferredInstall=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(me()&&S.tab==='today')render()});
+addEventListener('appinstalled',()=>{deferredInstall=null});
+function installApp(){if(!deferredInstall)return;deferredInstall.prompt();deferredInstall.userChoice.finally(()=>{deferredInstall=null;render()})}
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 /* ---------- التذكيرات ---------- */
 const fired={};
 function toast(t){const e=document.createElement('div');e.className='toast';e.setAttribute('role','alert');e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),7000)}
@@ -276,7 +378,7 @@ setInterval(()=>{
   });
  });
 },20000);
-render();
+applyTheme();render();
 </script>
 </body>
 </html>
