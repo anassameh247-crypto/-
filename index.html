@@ -71,6 +71,10 @@ button{font:inherit;cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script>
 const DN=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const CM=['توت','بابه','هاتور','كيهك','طوبة','أمشير','برمهات','برمودة','بشنس','بؤونة','أبيب','مسرى','النسيء'];
@@ -88,7 +92,8 @@ const tm=v=>{const[a,b]=(v||'0:0').split(':');return +a*60+ +b};
 const LS='mozakarti_v1';
 let DB;try{DB=JSON.parse(localStorage.getItem(LS))}catch(e){}
 DB=DB||{users:{},session:null};
-const save=()=>{try{localStorage.setItem(LS,JSON.stringify(DB))}catch(e){}};
+const saveL=()=>{try{localStorage.setItem(LS,JSON.stringify(DB))}catch(e){}};
+const save=()=>{saveL();cloudPush()};
 const me=()=>DB.users[DB.session];
 let S={tab:'today',date:new Date(),mode:'login',tmp:{},err:''};
 
@@ -163,13 +168,14 @@ function authView(){
  <div class="card">${rs?'<h3>استرجاع كلمة السر</h3>':`<div class="chips"><button class="chip ${reg?'':'on'}" onclick="S.mode='login';S.err='';render()">دخول</button><button class="chip ${reg?'on':''}" onclick="S.mode='reg';S.err='';render()">حساب جديد</button></div>`}
  ${reg?'<label for="nm">الاسم</label><input id="nm" autocomplete="name">':''}
  <label for="ph">رقم التليفون (مع كود الدولة لو من برا مصر)</label><input id="ph" type="tel" inputmode="numeric" autocomplete="tel">
- ${nw?`<label for="rq">سؤال الأمان</label><select id="rq">${RQ.map((q,i)=>`<option value="${i}">${q}</option>`).join('')}</select><label for="ra">الإجابة</label><input id="ra" autocomplete="off">`:''}
+ ${nw&&!CLOUD?`<label for="rq">سؤال الأمان</label><select id="rq">${RQ.map((q,i)=>`<option value="${i}">${q}</option>`).join('')}</select><label for="ra">الإجابة</label><input id="ra" autocomplete="off">`:''}
  ${pwf('pw',rs?'كلمة السر الجديدة':'كلمة السر',nw?'new-password':'current-password',nw?'meter()':'')}
  ${nw?'<div class="meter"><i id="pm"></i></div><div class="mut" id="ml"></div>':''}
  ${reg?pwf('pw2','تأكيد كلمة السر','new-password'):''}
+ ${reg&&CLOUD?'<label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;margin-top:14px"><input type="checkbox" id="cs" style="width:auto;margin-top:6px"><span>أوافق على حفظ بياناتي (الاسم والتليفون والديانة والمكان والمواعيد) على الموقع، وإن صاحب الموقع يشوفها عشان يتابعني ويساعدني. ولو عمري أقل من 18 سنة فولي أمري موافق.</span></label>':''}
  <div class="err" id="er">${esc(S.err)}</div>
  <button class="btn" onclick="doAuth()">${reg?'إنشاء الحساب':rs?'تغيير كلمة السر':'تسجيل الدخول'}</button>
- ${m==='login'?`<button class="lk" onclick="S.mode='reset';S.err='';render()">نسيت كلمة السر؟</button>`:rs?`<button class="lk" onclick="S.mode='login';S.err='';render()">رجوع للدخول</button>`:''}</div></div>`;
+ ${CLOUD?(m==='login'?'<p class="mut">نسيت كلمة السر؟ كلّم صاحب الموقع وهيفتحلك الحساب من جديد ببياناتك.</p>':''):m==='login'?`<button class="lk" onclick="S.mode='reset';S.err='';render()">نسيت كلمة السر؟</button>`:rs?`<button class="lk" onclick="S.mode='login';S.err='';render()">رجوع للدخول</button>`:''}</div></div>`;
 }
 const RQ=['اسم أول مدرسة ليك','اسم أقرب صديق في الطفولة','اسم مدينة اتولدت فيها','اسم أول مدرس حبيته'];
 const pwf=(id,lab,ac,inp)=>`<label for="${id}">${lab}</label><div class="pwr"><input id="${id}" type="password" autocomplete="${ac}" ${inp?`oninput="${inp}"`:''}><button type="button" class="eye" onclick="eye('${id}',this)">إظهار</button></div>`;
@@ -182,25 +188,33 @@ async function doAuth(){
  const m=S.mode,ph=normPh($('#ph').value),pw=$('#pw').value,bad=t=>{S.err=t;$('#er').textContent=t};
  if(ph.length<8||ph.length>15)return bad('اكتب رقم تليفون صحيح.');
  if(pw.length<6)return bad('كلمة السر لازم تكون 6 حروف أو أرقام على الأقل.');
- const ra=m==='login'?'':$('#ra').value.trim().toLowerCase(),rq=m==='login'?'':$('#rq').value,hs=await hash(pw,ph);
- if(m==='reg'){
-  const nm=$('#nm').value.trim();
-  if(nm.length<2)return bad('اكتب اسمك.');
-  if(pw!==$('#pw2').value)return bad('كلمتين السر مش زي بعض.');
-  if(ra.length<2)return bad('اكتب إجابة سؤال الأمان.');
-  if(DB.users[ph])return bad('الرقم ده عنده حساب بالفعل. سجّل دخول.');
-  DB.users[ph]={name:nm,phone:ph,hash:hs,rq,rh:await hash(ra,ph+'rq'),ss:900,se:1320,events:[],subjects:[],exams:[],tasks:[],done:{},focus:{}};
- }else if(m==='reset'){
-  const u=DB.users[ph];if(!u||!u.rh||u.rq!==rq||u.rh!==await hash(ra,ph+'rq'))return bad('البيانات مش مظبوطة، أو الحساب ده معندوش سؤال أمان.');
-  u.hash=hs;
+ const nm=m==='reg'?$('#nm').value.trim():'';
+ if(m==='reg'){if(nm.length<2)return bad('اكتب اسمك.');if(pw!==$('#pw2').value)return bad('كلمتين السر مش زي بعض.');if(CLOUD&&!$('#cs').checked)return bad('لازم توافق على حفظ البيانات عشان تكمل.')}
+ const hs=await hash(pw,ph),base={ss:900,se:1320,events:[],subjects:[],exams:[],tasks:[],done:{},focus:{}};
+ if(CLOUD){
+  const em=ph+'@mozakarti.app';
+  try{m==='reg'?await FA.createUserWithEmailAndPassword(em,pw):await FA.signInWithEmailAndPassword(em,pw)}
+  catch(e){const c=e.code;return bad(c==='auth/email-already-in-use'?'الرقم ده عنده حساب بالفعل. سجّل دخول.':c==='auth/network-request-failed'?'مفيش اتصال بالنت.':c==='auth/too-many-requests'?'محاولات كتير. استنى شوية وجرب تاني.':m==='reg'?'مقدرناش ننشئ الحساب. جرب تاني.':'الرقم أو كلمة السر غلط.')}
+  let d=null;try{const g=await FS.collection('users').doc(ph).get();if(g.exists)d=g.data()}catch(e){}
+  DB.users[ph]=Object.assign({name:nm||'طالب',phone:ph,createdAt:Date.now()},base,DB.users[ph]||{},d||{},m==='reg'?{name:nm,consentAt:Date.now()}:{},{hash:hs});
  }else{
-  const u=DB.users[ph];if((FAILS[ph]||0)>=5)return bad('محاولات غلط كتير. استنى دقيقة وجرب تاني.');
-  if(!u||u.hash!==hs){FAILS[ph]=(FAILS[ph]||0)+1;if(FAILS[ph]>=5)setTimeout(()=>FAILS[ph]=0,60000);return bad('الرقم أو كلمة السر غلط.')}
-  FAILS[ph]=0;
+  const ra=m==='login'?'':$('#ra').value.trim().toLowerCase(),rq=m==='login'?'':$('#rq').value;
+  if(m==='reg'){
+   if(ra.length<2)return bad('اكتب إجابة سؤال الأمان.');
+   if(DB.users[ph])return bad('الرقم ده عنده حساب بالفعل. سجّل دخول.');
+   DB.users[ph]=Object.assign({name:nm,phone:ph,hash:hs,rq,rh:await hash(ra,ph+'rq')},base);
+  }else if(m==='reset'){
+   const u=DB.users[ph];if(!u||!u.rh||u.rq!==rq||u.rh!==await hash(ra,ph+'rq'))return bad('البيانات مش مظبوطة، أو الحساب ده معندوش سؤال أمان.');
+   u.hash=hs;
+  }else{
+   const u=DB.users[ph];if((FAILS[ph]||0)>=5)return bad('محاولات غلط كتير. استنى دقيقة وجرب تاني.');
+   if(!u||u.hash!==hs){FAILS[ph]=(FAILS[ph]||0)+1;if(FAILS[ph]>=5)setTimeout(()=>FAILS[ph]=0,60000);return bad('الرقم أو كلمة السر غلط.')}
+   FAILS[ph]=0;
+  }
  }
  DB.session=ph;save();S.err='';S.mode='login';S.tab='today';S.tmp={};render();
 }
-function logout(){DB.session=null;save();S.mode='login';render()}
+function logout(){if(CLOUD)FA.signOut();DB.session=null;saveL();S.mode='login';render()}
 function onboard(){
  const t=S.tmp,u=me(),ch=(on,fn,x)=>`<button class="chip ${on?'on':''}" onclick="${fn}">${x}</button>`;
  return `<div class="wrap"><h1>أهلاً ${esc(u.name)}</h1><p class="mut">كام سؤال بسيط عشان نظبط مواعيدك.</p>
@@ -352,10 +366,19 @@ function notify(t){toast(t);try{if('Notification' in window&&Notification.permis
 /* حساب */
 const setU=(k,v)=>{me()[k]=v;save();toast('تم الحفظ.')};
 const saveName=()=>{const n=$('#pn').value.trim();if(n.length<2)return toast('اكتب اسمك.');me().name=n;save();toast('تم الحفظ.')};
-async function changePw(){const u=me(),o=$('#op').value,n=$('#np').value;if(n.length<6)return toast('كلمة السر الجديدة لازم 6 على الأقل.');if(await hash(o,u.phone)!==u.hash)return toast('كلمة السر الحالية غلط.');u.hash=await hash(n,u.phone);save();toast('تم تغيير كلمة السر.');render()}
+async function changePw(){
+ const u=me(),o=$('#op').value,n=$('#np').value;if(n.length<6)return toast('كلمة السر الجديدة لازم 6 على الأقل.');
+ if(CLOUD){try{await FA.currentUser.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.phone+'@mozakarti.app',o));await FA.currentUser.updatePassword(n)}catch(e){return toast('كلمة السر الحالية غلط أو مفيش اتصال.')}}
+ else if(await hash(o,u.phone)!==u.hash)return toast('كلمة السر الحالية غلط.');
+ u.hash=await hash(n,u.phone);save();toast('تم تغيير كلمة السر.');render();
+}
 function exportData(){const u=me(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(u)],{type:'application/json'}));a.download='mozakarti-'+u.phone+'.json';a.click()}
 function importData(i){const f=i.files[0];if(!f)return;f.text().then(t=>{try{const o=JSON.parse(t);if(o.phone!==me().phone)return toast('الملف ده بتاع حساب تاني.');DB.users[o.phone]=Object.assign(o,{hash:me().hash});save();toast('تم استرجاع البيانات.');render()}catch(e){toast('الملف مش صالح.')}})}
-function delAcc(){if(confirm('هتتمسح كل بياناتك نهائياً. متأكد؟')){delete DB.users[DB.session];logout()}}
+async function delAcc(){
+ if(!confirm('هتتمسح كل بياناتك نهائياً. متأكد؟'))return;const p=DB.session;
+ if(CLOUD){const pw=prompt('اكتب كلمة السر لتأكيد الحذف');if(!pw)return;try{await FA.currentUser.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(p+'@mozakarti.app',pw));await FS.collection('users').doc(p).delete();await FA.currentUser.delete()}catch(e){return toast('كلمة السر غلط أو مفيش اتصال.')}}
+ delete DB.users[p];logout();
+}
 function setTheme(v){DB.theme=v;save();applyTheme()}
 function applyTheme(){const r=document.documentElement;DB.theme&&DB.theme!=='auto'?r.setAttribute('data-theme',DB.theme):r.removeAttribute('data-theme')}
 /* تثبيت كتطبيق */
@@ -364,6 +387,15 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
 addEventListener('appinstalled',()=>{deferredInstall=null});
 function installApp(){if(!deferredInstall)return;deferredInstall.prompt();deferredInstall.userChoice.finally(()=>{deferredInstall=null;render()})}
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+/* ---------- المزامنة مع Firebase (لو firebase-config.js فيه بيانات المشروع) ---------- */
+const CLOUD=!!(window.FBC&&FBC.apiKey&&window.firebase);let FA,FS,pushT,dirty=0;
+if(CLOUD){firebase.initializeApp(FBC);FA=firebase.auth();FS=firebase.firestore();
+ FA.onAuthStateChanged(u=>{if(!u&&DB.session){DB.session=null;saveL();render()}else if(u&&DB.session)pull()})}
+async function pull(){try{const p=DB.session,g=await FS.collection('users').doc(p).get();if(g.exists&&p===DB.session){DB.users[p]=Object.assign(DB.users[p]||{},g.data());saveL();render()}}catch(e){}}
+function cloudPush(){if(!CLOUD||!DB.session)return;dirty=1;clearTimeout(pushT);pushT=setTimeout(doPush,1500)}
+async function doPush(){const u=me();if(!u||!FA.currentUser)return;const{hash:_h,rh:_r,...p}=u;try{await FS.collection('users').doc(u.phone).set(JSON.parse(JSON.stringify({...p,lastActive:Date.now()})),{merge:true});dirty=0}catch(e){}}
+setInterval(()=>{if(dirty)doPush()},30000);
 /* ---------- التذكيرات ---------- */
 const fired={};
 function toast(t){const e=document.createElement('div');e.className='toast';e.setAttribute('role','alert');e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),7000)}
