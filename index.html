@@ -200,7 +200,6 @@ function authView(){
  ${rc?'<p class="mut">هنبعت لينك تغيير كلمة السر على الإيميل اللي سجلت بيه.</p>':pwf('pw',rs?'كلمة السر الجديدة':'كلمة السر',nw?'new-password':'current-password',nw?'meter()':'')}
  ${nw?'<div class="meter"><i id="pm"></i></div><div class="mut" id="ml"></div>':''}
  ${reg?pwf('pw2','تأكيد كلمة السر','new-password'):''}
- ${reg&&CLOUD?'<label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;margin-top:14px"><input type="checkbox" id="cs" style="width:auto;margin-top:6px"><span>أوافق على حفظ بياناتي (الاسم والتليفون والإيميل والديانة والمكان والمواعيد) على الموقع، وإن صاحب الموقع يشوفها عشان يتابعني ويساعدني. ولو عمري أقل من 18 سنة فولي أمري موافق.</span></label>':''}
  <div class="err" id="er">${esc(S.err)}</div>
  <button class="btn" onclick="doAuth()">${reg?'إنشاء الحساب':rs?(CLOUD?'ابعت لينك التغيير':'تغيير كلمة السر'):'تسجيل الدخول'}</button>
  ${m==='login'?`<button class="lk" onclick="S.mode='reset';S.err='';render()">نسيت كلمة السر؟</button>`:rs?`<button class="lk" onclick="S.mode='login';S.err='';render()">رجوع للدخول</button>`:''}</div></div>`;
