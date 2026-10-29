@@ -87,8 +87,10 @@ function detail(){
  <div class="card"><h3>الامتحانات</h3>${L(u.exams,e=>`<div class="li"><span>${esc(e.name)}</span><span class="mut">${esc(e.date)}</span></div>`)}</div>
  <div class="card"><h3>الواجبات</h3>${L(u.tasks,k=>`<div class="li"><span>${esc(k.t)} ${k.d?'(تم)':''}</span><span class="mut">${esc(k.due||'')}</span></div>`)}</div>
  <div class="card"><h3>آخر 7 أيام</h3>${days.map(d=>`<div class="li"><span>${d.k}</span><span class="mut">${d.dn} فترة · ${d.fx} دقيقة تركيز</span></div>`).join('')}</div>
+ <button class="btn alt" onclick="resetPw('${esc(u.email||'')}')">ابعت للطالب لينك تغيير كلمة السر</button>
  <button class="btn alt" style="color:var(--bad)" onclick="del('${esc(u.phone)}')">حذف بيانات الطالب</button></div>`;
 }
+function resetPw(m){if(!m)return alert('مفيش إيميل مسجل للطالب ده.');A.sendPasswordResetEmail(m).then(()=>alert('اتبعت لينك تغيير كلمة السر على: '+m)).catch(x=>alert('مقدرناش نبعت: '+(x.code||x.message)))}
 function del(p){if(confirm('حذف بيانات الطالب نهائياً؟ حسابه في Authentication لازم تمسحه من Firebase Console كمان.')){SEL=null;F.collection('phones').doc(p).delete();F.collection('users').doc(p).delete()}}
 function csv(){
  const H=['الاسم','الرقم','الإيميل','الديانة','الدولة','المحافظة / المنطقة','المكان','خط العرض','خط الطول','تاريخ التسجيل','آخر نشاط','المواد','عدد المواعيد','فترات مكتملة','دقائق تركيز','المرحلة الدراسية'];
