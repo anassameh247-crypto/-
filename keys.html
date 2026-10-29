@@ -1,0 +1,10 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>مفاتيح الإشعارات</title>
+<style>body{font-family:Tahoma,Arial,sans-serif;max-width:640px;margin:20px auto;padding:0 14px;line-height:1.8}textarea{width:100%;font:14px monospace;direction:ltr;padding:8px;box-sizing:border-box}button{padding:10px 18px;font:inherit;cursor:pointer}</style></head>
+<body><h1>مولّد مفاتيح الإشعارات</h1><p>دوس الزرار. المفاتيح بتتولّد جوه متصفحك إنت بس، ومبتتبعتش لأي حد.</p><button onclick="gen()">ولّد المفاتيح</button>
+<h3>المفتاح العام (Public): حطه في firebase-config.js وفي Vercel</h3><textarea id="pub" rows="3" readonly></textarea>
+<h3>المفتاح الخاص (Private): سري، حطه في Vercel بس ومتشاركوش</h3><textarea id="prv" rows="2" readonly></textarea>
+<p>بعد ما تنسخهم احذف الملف ده من GitHub.</p>
+<script>
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+async function gen(){const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);document.getElementById('pub').value=b64(await crypto.subtle.exportKey('raw',k.publicKey));document.getElementById('prv').value=(await crypto.subtle.exportKey('jwk',k.privateKey)).d}
+</script></body></html>

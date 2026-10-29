@@ -7,3 +7,5 @@ window.FBC={
   messagingSenderId:"446591062131",
   appId:"1:446591062131:web:eaf0f78ec69b9be6ca5a06"
 };
+// المفتاح العام للإشعارات (من صفحة keys.html)
+window.VAPID_PUBLIC="";
